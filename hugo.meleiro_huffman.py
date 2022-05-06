@@ -19,35 +19,22 @@ from algopy import heap
 ###############################################################################
 ## COMPRESSION
 
-def __frequency(dataIN, c):
-    """
-    :param dataIN: string
-    :param c: character
-    :return: frequency of the character c in the string dataIN
-    """
+def __frequency(dataIN, dataC):
     count = 0
     for i in range(len(dataIN)):
-        if dataIN[i] == c:
+        if dataIN[i] == dataC:
             count += 1
     return count
 
 
-def __inthelist(L, c):
-    """
-    :param L: list of Tuple(frequency, char)
-    :param c: char
-    :return: True if the character c is in the list L or False if not
-    """
+def __inthelist(L, dataC):
     for i in range(len(L)):
-        if c == L[i][1]:
+        if dataC == L[i][1]:
             return True
     return False
 
 
 def buildfrequencylist(dataIN):
-    """
-    Builds a tuple list of the character frequencies in the input.
-    """
     L = []
     for i in range(len(dataIN)):
         if not __inthelist(L, dataIN[i]):
@@ -56,58 +43,41 @@ def buildfrequencylist(dataIN):
     return L
 
 
-def buildHuffmantree(inputList):
-    """
-    Processes the frequency list into a Huffman tree according to the algorithm.
-    """
 def __listtree(inputList):
-    """
-    :param inputList: list of Tuple(frequency, char)
-    :return: a bintree list where each bintree is a leaf and have a Tuple(frequency, char) as key
-    """
     for i in range(len(inputList)):
         inputList[i] = bintree.BinTree((inputList[i][0], inputList[i][1]), None, None)
     return inputList
 
 
-def __2minlist(inputList):
-    """
-    :param inputList: bintree list (result of __listtree(inputList))
-    :return: input list but with a new bintree created from the 2 smallest frequency of the list
-    """
-    # first min
-    mini1 = inputList[0]
-    mini1freq = mini1.key[0]
+def __buildminlist(inputList):
+    min1 = inputList[0]
+    freqencemin1 = min1.key[0]
     length = len(inputList)
     index = 0
     for i in range(length):
-        if inputList[i].key[0] < mini1freq:
-            mini1 = inputList[i]
-            mini1freq = mini1.key[0]
+        if inputList[i].key[0] < freqencemin1:
+            min1 = inputList[i]
+            freqencemin1 = min1.key[0]
             index = i
     (inputList[index], inputList[length - 1]) = (inputList[length - 1], inputList[index])
-    mini1 = inputList.pop()
-    # second min
-    mini2 = inputList[0]
-    mini2freq = mini2.key[0]
+    min1 = inputList.pop()
+    # Next min
+    min2 = inputList[0]
+    freqencemin2 = min2.key[0]
     index = 0
     length = len(inputList)
     for i in range(length):
-        if inputList[i].key[0] < mini2freq:
-            mini2 = inputList[i]
-            mini2freq = mini2.key[0]
+        if inputList[i].key[0] < freqencemin2:
+            min2 = inputList[i]
+            freqencemin2 = min2.key[0]
             index = i
     (inputList[index], inputList[length - 1]) = (inputList[length - 1], inputList[index])
-    mini2 = inputList.pop()
-    inputList.append(bintree.BinTree((mini1freq + mini2freq, None), mini1, mini2))
+    min2 = inputList.pop()
+    inputList.append(bintree.BinTree((freqencemin1 + freqencemin2, None), min1, min2))
     return inputList
 
 
 def __changeKey(B):
-    """
-    :param B: an huffman tree
-    :return: the same huffman tree but the key as changed,
-    """
     if B != None:
         if B.key[1] == '_':
             B.key = ' '
@@ -124,17 +94,66 @@ def buildHuffmantree(inputList):
     """
     inputList = __listtree(inputList)
     while len(inputList) > 1:
-        inputList = __2minlist(inputList)
+        inputList = __buildminlist(inputList)
     B = __changeKey(inputList[0])
     return B
 
+def __listofoccurence(B, L=[], s=""):
+    if B != None:
+        if B.key != None:
+            L.append((B.key, s))
+        if B.left != None:
+            __listofoccurence(B.left, L, s + "0")
+        if B.right != None:
+            __listofoccurence(B.right, L, s + "1")
+    return L
+
+
+def __charinlist(L, c):
+    length = len(L)
+    for i in range(length):
+        if L[i][0] == '_' and c == ' ':
+            return i, True
+        if L[i][0] == c:
+            return i, True
+    return -1, False
 
 def encodedata(huffmanTree, dataIN):
     """
     Encodes the input string to its binary string representation.
     """
-    # FIXME
-    pass
+    s = ""
+    L = __listofoccurence(huffmanTree, [], "")
+    length = len(dataIN)
+    for i in range(length):
+        (index, valid) = __charinlist(L, dataIN[i])
+        if valid:
+            s += L[index][1]
+    return s
+
+def __charbin(char):
+    code = ord(char)
+    s = ""
+    while code > 0:
+        s += str(code % 2)
+        code = code // 2
+    while len(s) < 8:
+        s += '0'
+    res = ""
+    index = len(s) - 1
+    while index >= 0:
+        res += s[index]
+        index -= 1
+    return res
+
+
+def __encodetreebis(B, s=""):
+    if B:
+        if B.key:
+            return '1' + __charbin(B.key) + __encodetreebis(B.left, s) + __encodetreebis(B.right, s)
+        else:
+            return '0' + __encodetreebis(B.left, s) + __encodetreebis(B.right, s)
+    return s
 
 
 def encodetree(huffmanTree):
@@ -143,8 +162,7 @@ def encodetree(huffmanTree):
         * each leaf key is encoded into its binary representation on 8 bits preceded by '1'
         * each time we go left we add a '0' to the result
     """
-    # FIXME
-    pass
+    return __encodetreebis(huffmanTree)
 
 
 def tobinary(dataIN):
@@ -166,23 +184,112 @@ def compress(dataIn):
     
 ################################################################################
 ## DECOMPRESSION
+def __charintree(B, dataIn, index):
+    valid = True
+    res = ""
+    while valid:
+        if B.key != None:
+            valid = False
+            if B.key == '_':
+                res += ' '
+            else:
+                res = B.key
+        elif dataIn[index] == '0':
+            B = B.left
+        else:
+            B = B.right
+        index += 1
+    return res, index - 1
+
 
 def decodedata(huffmanTree, dataIN):
     """
     Decode a string using the corresponding huffman tree into something more readable.
     """
-    # FIXME
-    pass
+    res = ""
+    length = len(dataIN)
+    index = 0
+    resbis, index = __charintree(huffmanTree, dataIN, index)
+    res += resbis
+    while index < length:
+        resbis, index = __charintree(huffmanTree, dataIN, index)
+        res += resbis
+    return res
 
     
+def __binarychar(binstr):
+    power = 7
+    i = 0
+    res = 0
+    while i < len(binstr):
+        if binstr[i] == '1':
+            res += 2**power
+        power -= 1
+        i += 1
+    return chr(res)
+
+
+def __reverseList(L):
+    Lres = []
+    indexL = len(L) - 1
+    while indexL >= 0:
+        Lres.append(L[indexL])
+        indexL -= 1
+    L = Lres
+    return L
+
+
+def __chartolist(dataIN):
+    L = []
+    index = 0
+    structure = []
+    while index < len(dataIN):
+        s = ""
+        if dataIN[index] == '1':
+            structure.append(dataIN[index])
+            index += 1
+            i = index
+            while i < index + 8:
+                s += dataIN[i]
+                i += 1
+            index += 8
+            L.append(__binarychar(s))
+        else:
+            structure.append(dataIN[index])
+            index += 1
+    L = __reverseList(L)
+    structure = __reverseList(structure)
+    return L, structure
+
+
+def __decodetree(chartolist, tree):
+    if len(tree) <= 0:
+        return None
+    indextree = len(tree) - 1
+    if tree[indextree] == '1':
+        tree.pop()
+        index = len(chartolist) - 1
+        key = chartolist[index]
+        chartolist.pop()
+        B = bintree.BinTree(key, None, None)
+        return B
+    elif tree[indextree] == '0':
+        tree.pop()
+        B = bintree.BinTree(None, None, None)
+        B.left = __decodetree(chartolist, tree)
+        B.right = __decodetree(chartolist, tree)
+        return B
+    return None
+
+
 def decodetree(dataIN):
     """
     Decodes a huffman tree from its binary representation:
         * a '0' means we add a new internal node and go to its left node
         * a '1' means the next 8 values are the encoded character of the current leaf         
     """
-    # FIXME
-    pass
+    (chartolist, tree) = __chartolist(dataIN)
+    return __decodetree(chartolist, tree)
 
 
 def frombinary(dataIN, align):
